@@ -4,32 +4,41 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
-
-	"github.com/google/uuid"
 )
 
-func Create() {
-	requestBody := RequestBody{
-		AccountData: AccountData{
-			ID:             uuid.NewString(),
-			OrganisationID: uuid.NewString(),
-			Type:           "accounts",
-			Attributes: AccountAttributes{
-				Country: "GB",
-				Name:    []string{"Holly Golightly"},
-			},
-		},
+func Create(accountData AccountData) bool {
+	requestBody := Data{
+		AccountData: accountData,
 	}
 
 	json, _ := json.Marshal(requestBody)
 
-	response, _ := http.Post("http://localhost:8080/v1/organisation/accounts", "application/json", bytes.NewBuffer(json))
+	response, err := http.Post("http://localhost:8080/v1/organisation/accounts", "application/json", bytes.NewBuffer(json))
+	if err != nil {
+		panic(err.Error())
+	}
+	defer response.Body.Close()
 
-	fmt.Println(response.StatusCode)
+	return response.StatusCode == 201
 }
 
-type RequestBody struct {
+func Fetch(accountId string) AccountData {
+	response, err := http.Get("http://localhost:8080/v1/organisation/accounts/" + accountId)
+	if err != nil {
+		fmt.Println(err)
+		panic(err.Error())
+	}
+	defer response.Body.Close()
+	body, _ := ioutil.ReadAll(response.Body)
+
+	var data Data
+	json.Unmarshal(body, &data)
+	return data.AccountData
+}
+
+type Data struct {
 	AccountData AccountData `json:"data"`
 }
 
